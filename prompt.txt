@@ -1,0 +1,4 @@
+
+create a spring boot project for inventory management API only api that will get tested by postman description product stocka and inventory tracking, crud entities prodicts, stock, supppliers, workflow is add prodcurt -> update stock -> check level -> reorder -> receive key features stock updates, prevent negative inventory and reorder alrets
+
+java db config : HikariCOnfig, session factory, hibernate, lombok springboot: DB config conteollwe servive model/ entity DAO (reposiroyry) resources -> application.properties pom.xml crud operations note use springboot annotations not to use autowired annotation for injection class @RequiredArgsConstructor(onConstructor = @__Autowired))
