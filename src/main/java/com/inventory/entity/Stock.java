@@ -2,7 +2,6 @@ package com.inventory.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
-
 import java.time.LocalDateTime;
 
 @Entity
@@ -22,7 +21,9 @@ public class Stock {
     @JoinColumn(name = "product_id")
     private Product product;
 
+    @Column(nullable = false)
     private Integer quantity;
 
+    @Column(nullable = false)
     private LocalDateTime lastUpdated;
 }

@@ -6,11 +6,13 @@ import com.inventory.exception.ResourceNotFoundException;
 import com.inventory.repository.SupplierRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
 @Service
 @RequiredArgsConstructor
+@Transactional
 public class SupplierService {
 
     private final SupplierRepository supplierRepository;

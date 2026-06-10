@@ -5,6 +5,8 @@ import com.inventory.entity.Supplier;
 import com.inventory.service.SupplierService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -17,38 +19,44 @@ public class SupplierController {
     private final SupplierService supplierService;
 
     @PostMapping
-    public Supplier create(
+    public ResponseEntity<Supplier> create(
             @Valid @RequestBody SupplierRequest request) {
 
-        return supplierService.create(request);
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(supplierService.create(request));
     }
 
     @GetMapping
-    public List<Supplier> getAll() {
-        return supplierService.getAll();
+    public ResponseEntity<List<Supplier>> getAll() {
+
+        return ResponseEntity.ok(
+                supplierService.getAll());
     }
 
     @GetMapping("/{id}")
-    public Supplier getById(
+    public ResponseEntity<Supplier> getById(
             @PathVariable Long id) {
 
-        return supplierService.getById(id);
+        return ResponseEntity.ok(
+                supplierService.getById(id));
     }
 
     @PutMapping("/{id}")
-    public Supplier update(
+    public ResponseEntity<Supplier> update(
             @PathVariable Long id,
             @Valid @RequestBody SupplierRequest request) {
 
-        return supplierService.update(id, request);
+        return ResponseEntity.ok(
+                supplierService.update(id, request));
     }
 
     @DeleteMapping("/{id}")
-    public String delete(
+    public ResponseEntity<String> delete(
             @PathVariable Long id) {
 
         supplierService.delete(id);
 
-        return "Supplier Deleted Successfully";
+        return ResponseEntity.ok(
+                "Supplier deleted successfully");
     }
 }

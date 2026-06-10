@@ -5,6 +5,7 @@ import com.inventory.entity.Stock;
 import com.inventory.service.StockService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -17,64 +18,73 @@ public class StockController {
     private final StockService stockService;
 
     @PostMapping
-    public Stock create(
+    public ResponseEntity<Stock> createStock(
             @Valid @RequestBody StockRequest request) {
 
-        return stockService.create(request);
+        return ResponseEntity.ok(
+                stockService.create(request));
     }
 
     @GetMapping
-    public List<Stock> getAll() {
-        return stockService.getAll();
+    public ResponseEntity<List<Stock>> getAllStocks() {
+
+        return ResponseEntity.ok(
+                stockService.getAll());
     }
 
     @GetMapping("/{id}")
-    public Stock getById(
+    public ResponseEntity<Stock> getStockById(
             @PathVariable Long id) {
 
-        return stockService.getById(id);
+        return ResponseEntity.ok(
+                stockService.getById(id));
     }
 
     @PutMapping("/add/{productId}")
-    public Stock addStock(
+    public ResponseEntity<Stock> addStock(
             @PathVariable Long productId,
             @RequestParam Integer quantity) {
 
-        return stockService.addStock(
-                productId,
-                quantity);
+        return ResponseEntity.ok(
+                stockService.addStock(
+                        productId,
+                        quantity));
     }
 
     @PutMapping("/reduce/{productId}")
-    public Stock reduceStock(
+    public ResponseEntity<Stock> reduceStock(
             @PathVariable Long productId,
             @RequestParam Integer quantity) {
 
-        return stockService.reduceStock(
-                productId,
-                quantity);
+        return ResponseEntity.ok(
+                stockService.reduceStock(
+                        productId,
+                        quantity));
     }
 
     @PutMapping("/receive/{productId}")
-    public Stock receiveStock(
+    public ResponseEntity<Stock> receiveStock(
             @PathVariable Long productId,
             @RequestParam Integer quantity) {
 
-        return stockService.receiveStock(
-                productId,
-                quantity);
+        return ResponseEntity.ok(
+                stockService.receiveStock(
+                        productId,
+                        quantity));
     }
 
     @GetMapping("/check/{productId}")
-    public Integer checkLevel(
+    public ResponseEntity<Integer> checkLevel(
             @PathVariable Long productId) {
 
-        return stockService.checkLevel(productId);
+        return ResponseEntity.ok(
+                stockService.checkLevel(productId));
     }
 
     @GetMapping("/reorder-alerts")
-    public List<String> reorderAlerts() {
+    public ResponseEntity<List<String>> reorderAlerts() {
 
-        return stockService.reorderAlerts();
+        return ResponseEntity.ok(
+                stockService.reorderAlerts());
     }
 }
