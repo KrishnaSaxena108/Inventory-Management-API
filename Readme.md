@@ -578,6 +578,94 @@ curl http://localhost:8080/api/stocks/reorder-alerts
 
 ---
 
+# Event Streaming & Caching
+
+The service embeds **both a Kafka producer and a Kafka consumer**, a
+**multi-backend distributed caching strategy**, and a dedicated
+**history table** that records every change.
+
+## Kafka (Producer + Consumer in the same service)
+
+Every create / update / delete (including stock add / reduce / receive)
+publishes an `InventoryEvent` to the `inventory-history-events` topic. A
+`@KafkaListener` in the same application consumes those events and persists
+them into the `inventory_history` table.
+
+```text
+Save/Update API ──► InventoryEventProducer ──► Kafka topic
+                                                   │
+                                                   ▼
+                                       InventoryEventConsumer
+                                                   │
+                                                   ▼
+                                         inventory_history table
+```
+
+The producer is failure tolerant: if the broker is unreachable the event is
+logged and the API call still succeeds.
+
+## Distributed Caching Strategy
+
+Each fetch endpoint reads from its assigned cache first and only calls the
+DAO on a **cache miss or backend failure**. Every save/update additionally
+writes the latest snapshot to **Redis**.
+
+| Domain   | Read cache | Backend                         |
+| -------- | ---------- | ------------------------------- |
+| Product  | Redis      | `spring-boot-starter-data-redis`|
+| Supplier | LRU        | in-process `LinkedHashMap` LRU  |
+| Stock    | Caffeine   | `com.github.ben-manes.caffeine` |
+
+All three implement a common `CacheProvider` interface whose `get`/`put`/
+`evict` operations never throw — backend errors degrade gracefully to a DAO
+call.
+
+## History APIs
+
+| Method | Endpoint                              | Description                       |
+| ------ | ------------------------------------- | --------------------------------- |
+| GET    | `/api/history`                        | All recorded history rows         |
+| GET    | `/api/history/{entityType}`           | History for `PRODUCT/STOCK/SUPPLIER` |
+| GET    | `/api/history/{entityType}/{entityId}`| History for a single entity       |
+
+## Configuration
+
+The following defaults are added to `application.properties` (override as
+needed):
+
+```properties
+# Redis
+spring.data.redis.host=localhost
+spring.data.redis.port=6379
+
+# Kafka
+spring.kafka.bootstrap-servers=localhost:9092
+app.kafka.topic=inventory-history-events
+app.kafka.group-id=inventory-history-group
+
+# Cache tuning
+app.cache.redis.ttl-seconds=600
+app.cache.lru.max-size=500
+app.cache.caffeine.max-size=500
+app.cache.caffeine.ttl-seconds=300
+```
+
+### Running the infrastructure (Docker)
+
+```bash
+docker run -d --name redis -p 6379:6379 redis:7
+docker run -d --name kafka -p 9092:9092 \
+  -e KAFKA_CFG_NODE_ID=0 \
+  -e KAFKA_CFG_PROCESS_ROLES=controller,broker \
+  -e KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=0@kafka:9093 \
+  -e KAFKA_CFG_LISTENERS=PLAINTEXT://:9092,CONTROLLER://:9093 \
+  -e KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://localhost:9092 \
+  -e KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER \
+  bitnami/kafka:3.7
+```
+
+---
+
 # Future Enhancements
 
 * Swagger/OpenAPI Documentation
