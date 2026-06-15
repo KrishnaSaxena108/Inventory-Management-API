@@ -16,48 +16,40 @@ import java.util.List;
 @RequiredArgsConstructor
 public class SupplierController {
 
-    private final SupplierService supplierService;
+        private final SupplierService supplierService;
 
-    @PostMapping
-    public ResponseEntity<Supplier> create(
-            @Valid @RequestBody SupplierRequest request) {
+        @PostMapping
+        public ResponseEntity<Supplier> save(
+                        @Valid @RequestBody SupplierRequest request) {
 
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(supplierService.create(request));
-    }
+                Supplier supplier = supplierService.save(request);
 
-    @GetMapping
-    public ResponseEntity<List<Supplier>> getAll(@RequestParam(defaultValue = "0") int offset,
-        @RequestParam(defaultValue = "4") int limit) {
+                return ResponseEntity.ok(supplier);
+        }
 
-        return ResponseEntity.ok(
-                supplierService.getAll(offset, limit));
-    }
+        @GetMapping
+        public ResponseEntity<List<Supplier>> getAll(@RequestParam(defaultValue = "0") int offset,
+                        @RequestParam(defaultValue = "4") int limit) {
 
-    @GetMapping("/{id}")
-    public ResponseEntity<Supplier> getById(
-            @PathVariable Long id) {
+                return ResponseEntity.ok(
+                                supplierService.getAll(offset, limit));
+        }
 
-        return ResponseEntity.ok(
-                supplierService.getById(id));
-    }
+        @GetMapping("/{id}")
+        public ResponseEntity<Supplier> getById(
+                        @PathVariable Long id) {
 
-    @PutMapping("/{id}")
-    public ResponseEntity<Supplier> update(
-            @PathVariable Long id,
-            @Valid @RequestBody SupplierRequest request) {
+                return ResponseEntity.ok(
+                                supplierService.getById(id));
+        }
 
-        return ResponseEntity.ok(
-                supplierService.update(id, request));
-    }
+        @DeleteMapping("/{id}")
+        public ResponseEntity<String> delete(
+                        @PathVariable Long id) {
 
-    @DeleteMapping("/{id}")
-    public ResponseEntity<String> delete(
-            @PathVariable Long id) {
+                supplierService.delete(id);
 
-        supplierService.delete(id);
-
-        return ResponseEntity.ok(
-                "Supplier deleted successfully");
-    }
+                return ResponseEntity.ok(
+                                "Supplier deleted successfully");
+        }
 }

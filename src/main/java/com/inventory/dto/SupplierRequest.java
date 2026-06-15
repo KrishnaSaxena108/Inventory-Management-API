@@ -8,6 +8,8 @@ import lombok.Data;
 @Data
 public class SupplierRequest {
 
+    private Long id;
+
     @NotBlank(message = "Supplier name is required")
     @Pattern(
             regexp = "^[A-Za-z]+(?:\\s[A-Za-z]+)*$",

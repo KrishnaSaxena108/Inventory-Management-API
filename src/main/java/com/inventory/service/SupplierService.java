@@ -171,4 +171,57 @@ public class SupplierService {
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Supplier not found"));
     }
+
+    public Supplier save(SupplierRequest request) {
+
+        Supplier supplier;
+
+        if (request.getId() != null &&
+                supplierRepository.existsById(request.getId())) {
+
+            supplier = supplierRepository.findById(request.getId())
+                    .orElseThrow(() -> new ResourceNotFoundException(
+                            "Supplier not found"));
+
+            supplier.setName(request.getName());
+            supplier.setEmail(request.getEmail());
+            supplier.setPhone(request.getPhone());
+
+            supplier = supplierRepository.save(supplier);
+
+            eventProducer.publish(
+                    "SUPPLIER",
+                    "UPDATE",
+                    supplier.getId(),
+                    supplier);
+
+            System.out.println(
+                    "SUPPLIER UPDATED -> " +
+                            supplier.getId());
+
+        } else {
+
+            supplier = Supplier.builder()
+                    .name(request.getName())
+                    .email(request.getEmail())
+                    .phone(request.getPhone())
+                    .build();
+
+            supplier = supplierRepository.save(supplier);
+
+            eventProducer.publish(
+                    "SUPPLIER",
+                    "CREATE",
+                    supplier.getId(),
+                    supplier);
+
+            System.out.println(
+                    "SUPPLIER CREATED -> " +
+                            supplier.getId());
+        }
+
+        cacheOnWrite(supplier);
+
+        return supplier;
+    }
 }
