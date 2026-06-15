@@ -16,8 +16,7 @@ import java.time.LocalDateTime;
 @RequiredArgsConstructor
 public class InventoryEventProducer {
 
-    private static final Logger log =
-            LoggerFactory.getLogger(InventoryEventProducer.class);
+    private static final Logger log = LoggerFactory.getLogger(InventoryEventProducer.class);
 
     private final KafkaTemplate<String, InventoryEvent> kafkaTemplate;
     private final ObjectMapper objectMapper;
@@ -31,21 +30,37 @@ public class InventoryEventProducer {
             Long entityId,
             Object snapshot) {
 
-        InventoryEvent event =
-                InventoryEvent.builder()
-                        .entityType(entityType)
-                        .entityId(entityId == null
-                                ? null
-                                : String.valueOf(entityId))
-                        .action(action)
-                        .details(serialize(snapshot))
-                        .timestamp(LocalDateTime.now())
-                        .build();
+        InventoryEvent event = InventoryEvent.builder()
+                .entityType(entityType)
+                .entityId(entityId == null
+                        ? null
+                        : String.valueOf(entityId))
+                .action(action)
+                .details(serialize(snapshot))
+                .timestamp(LocalDateTime.now())
+                .build();
 
         try {
-            kafkaTemplate.send(topic, event.getEntityId(), event);
-            log.debug("Published inventory event {} {} id={}",
-                    entityType, action, entityId);
+            kafkaTemplate.send(topic, event.getEntityId(), event)
+                    .whenComplete((result, ex) -> {
+
+                        if (ex == null) {
+
+                            log.info(
+                                    "KAFKA PRODUCED -> Topic={} Partition={} Offset={} Key={} Action={}",
+                                    result.getRecordMetadata().topic(),
+                                    result.getRecordMetadata().partition(),
+                                    result.getRecordMetadata().offset(),
+                                    event.getEntityId(),
+                                    event.getAction());
+
+                        } else {
+
+                            log.error(
+                                    "KAFKA PRODUCER ERROR",
+                                    ex);
+                        }
+                    });
         } catch (Exception ex) {
             log.error("Failed to publish inventory event {} {} id={}",
                     entityType, action, entityId, ex);

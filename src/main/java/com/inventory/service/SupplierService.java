@@ -67,9 +67,17 @@ public class SupplierService {
         Object cached = readCache.get(cacheKey);
 
         if (cached instanceof List<?>) {
+
+            System.out.println(
+                    "LRU CACHE HIT -> Suppliers Page " +
+                            offset + "," + limit);
+
             return (List<Supplier>) cached;
         }
 
+        System.out.println(
+                "DATABASE HIT -> Suppliers Page " +
+                        offset + "," + limit);
         Pageable pageable = PageRequest.of(offset / limit, limit);
 
         List<Supplier> suppliers = supplierRepository.findAll(pageable)
@@ -85,9 +93,18 @@ public class SupplierService {
 
         Object cached = readCache.get(KEY_PREFIX + id);
         if (cached instanceof Supplier) {
+
+            System.out.println(
+                    "LRU CACHE HIT -> Supplier " + id);
+
             return (Supplier) cached;
         }
 
+        System.out.println(
+                "CACHE MISS -> Supplier " + id);
+
+        System.out.println(
+                "DATABASE HIT -> Supplier " + id);
         Supplier supplier = loadById(id);
         readCache.put(KEY_PREFIX + id, supplier);
         return supplier;
@@ -129,8 +146,23 @@ public class SupplierService {
     }
 
     private void cacheOnWrite(Supplier saved) {
-        redisCache.put(KEY_PREFIX + saved.getId(), saved);
-        readCache.put(KEY_PREFIX + saved.getId(), saved);
+
+        redisCache.put(
+                KEY_PREFIX + saved.getId(),
+                saved);
+
+        System.out.println(
+                "REDIS CACHE UPDATED -> " +
+                        KEY_PREFIX + saved.getId());
+
+        readCache.put(
+                KEY_PREFIX + saved.getId(),
+                saved);
+
+        System.out.println(
+                "LRU CACHE UPDATED -> " +
+                        KEY_PREFIX + saved.getId());
+
         readCache.evict(KEY_ALL);
     }
 
