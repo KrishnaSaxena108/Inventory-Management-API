@@ -1,7 +1,10 @@
 package com.inventory.entity;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotNull;
 import lombok.*;
+
 import java.time.LocalDateTime;
 
 @Entity
@@ -17,13 +20,15 @@ public class Stock {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @OneToOne
-    @JoinColumn(name = "product_id")
-    private Product product;
-
+    @NotNull(message = "Quantity is required")
+    @Min(value = 0, message = "Quantity cannot be negative")
     @Column(nullable = false)
     private Integer quantity;
 
     @Column(nullable = false)
     private LocalDateTime lastUpdated;
+
+    @ManyToOne
+    @JoinColumn(name = "product_id", nullable = false)
+    private Product product;
 }

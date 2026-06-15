@@ -1,11 +1,9 @@
 package com.inventory.controller;
 
-import com.inventory.dto.ProductRequest;
 import com.inventory.entity.Product;
 import com.inventory.service.ProductService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -19,11 +17,11 @@ public class ProductController {
     private final ProductService productService;
 
     @PostMapping
-    public ResponseEntity<Product> create(
-            @Valid @RequestBody ProductRequest request) {
+    public ResponseEntity<Product> save(
+            @Valid @RequestBody Product product) {
 
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(productService.create(request));
+        return ResponseEntity.ok(
+                productService.save(product));
     }
 
     @GetMapping
@@ -39,15 +37,6 @@ public class ProductController {
 
         return ResponseEntity.ok(
                 productService.getById(id));
-    }
-
-    @PutMapping("/{id}")
-    public ResponseEntity<Product> update(
-            @PathVariable Long id,
-            @Valid @RequestBody ProductRequest request) {
-
-        return ResponseEntity.ok(
-                productService.update(id, request));
     }
 
     @DeleteMapping("/{id}")

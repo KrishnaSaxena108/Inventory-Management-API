@@ -1,6 +1,5 @@
 package com.inventory.controller;
 
-import com.inventory.dto.SupplierRequest;
 import com.inventory.entity.Supplier;
 import com.inventory.service.SupplierService;
 import jakarta.validation.Valid;
@@ -20,7 +19,7 @@ public class SupplierController {
 
         @PostMapping
         public ResponseEntity<Supplier> save(
-                        @Valid @RequestBody SupplierRequest request) {
+                        @Valid @RequestBody Supplier request) {
 
                 Supplier supplier = supplierService.save(request);
 

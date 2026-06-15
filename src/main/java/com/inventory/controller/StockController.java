@@ -1,6 +1,5 @@
 package com.inventory.controller;
 
-import com.inventory.dto.StockRequest;
 import com.inventory.entity.Stock;
 import com.inventory.service.StockService;
 import jakarta.validation.Valid;
@@ -18,11 +17,11 @@ public class StockController {
     private final StockService stockService;
 
     @PostMapping
-    public ResponseEntity<Stock> createStock(
-            @Valid @RequestBody StockRequest request) {
+    public ResponseEntity<Stock> save(
+            @Valid @RequestBody Stock stock) {
 
         return ResponseEntity.ok(
-                stockService.create(request));
+                stockService.save(stock));
     }
 
     @GetMapping
@@ -38,39 +37,6 @@ public class StockController {
 
         return ResponseEntity.ok(
                 stockService.getById(id));
-    }
-
-    @PutMapping("/add/{productId}")
-    public ResponseEntity<Stock> addStock(
-            @PathVariable Long productId,
-            @RequestParam Integer quantity) {
-
-        return ResponseEntity.ok(
-                stockService.addStock(
-                        productId,
-                        quantity));
-    }
-
-    @PutMapping("/reduce/{productId}")
-    public ResponseEntity<Stock> reduceStock(
-            @PathVariable Long productId,
-            @RequestParam Integer quantity) {
-
-        return ResponseEntity.ok(
-                stockService.reduceStock(
-                        productId,
-                        quantity));
-    }
-
-    @PutMapping("/receive/{productId}")
-    public ResponseEntity<Stock> receiveStock(
-            @PathVariable Long productId,
-            @RequestParam Integer quantity) {
-
-        return ResponseEntity.ok(
-                stockService.receiveStock(
-                        productId,
-                        quantity));
     }
 
     @GetMapping("/check/{productId}")

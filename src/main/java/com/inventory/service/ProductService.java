@@ -1,7 +1,6 @@
 package com.inventory.service;
 
 import com.inventory.cache.CacheProvider;
-import com.inventory.dto.ProductRequest;
 import com.inventory.entity.Product;
 import com.inventory.entity.Supplier;
 import com.inventory.event.EntityType;
@@ -36,32 +35,6 @@ public class ProductService {
 
     @Qualifier("redisCacheProvider")
     private final CacheProvider cache;
-
-    public Product create(ProductRequest request) {
-
-        Supplier supplier = findSupplier(request.getSupplierId());
-
-        Product product =
-                Product.builder()
-                        .name(request.getName())
-                        .description(request.getDescription())
-                        .reorderLevel(request.getReorderLevel())
-                        .supplier(supplier)
-                        .build();
-
-        Product saved = productRepository.save(product);
-
-        cache.put(KEY_PREFIX + saved.getId(), saved);
-        cache.evict(KEY_ALL);
-        eventProducer.publish(
-                EntityType.PRODUCT,
-                EventAction.CREATE,
-                saved.getId(),
-                saved);
-
-        return saved;
-    }
-
     @Transactional(readOnly = true)
     @SuppressWarnings("unchecked")
     public List<Product> getAll() {
@@ -89,29 +62,6 @@ public class ProductService {
         return product;
     }
 
-    public Product update(Long id, ProductRequest request) {
-
-        Product product = loadById(id);
-        Supplier supplier = findSupplier(request.getSupplierId());
-
-        product.setName(request.getName());
-        product.setDescription(request.getDescription());
-        product.setReorderLevel(request.getReorderLevel());
-        product.setSupplier(supplier);
-
-        Product saved = productRepository.save(product);
-
-        cache.put(KEY_PREFIX + saved.getId(), saved);
-        cache.evict(KEY_ALL);
-        eventProducer.publish(
-                EntityType.PRODUCT,
-                EventAction.UPDATE,
-                saved.getId(),
-                saved);
-
-        return saved;
-    }
-
     public void delete(Long id) {
 
         Product product = loadById(id);
@@ -128,15 +78,51 @@ public class ProductService {
 
     private Product loadById(Long id) {
         return productRepository.findById(id)
-                .orElseThrow(() ->
-                        new ResourceNotFoundException(
-                                "Product not found"));
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Product not found"));
     }
 
     private Supplier findSupplier(Long supplierId) {
         return supplierRepository.findById(supplierId)
-                .orElseThrow(() ->
-                        new ResourceNotFoundException(
-                                "Supplier not found"));
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Supplier not found"));
+    }
+
+    public Product save(Product product) {
+
+        Product saved;
+
+        if (product.getId() != null &&
+                productRepository.existsById(product.getId())) {
+
+            Product existing = productRepository.findById(product.getId())
+                    .orElseThrow(() -> new ResourceNotFoundException(
+                            "Product not found"));
+
+            existing.setName(product.getName());
+            existing.setDescription(product.getDescription());
+            existing.setReorderLevel(product.getReorderLevel());
+            existing.setSupplier(product.getSupplier());
+
+            saved = productRepository.save(existing);
+
+            eventProducer.publish(
+                    "PRODUCT",
+                    "UPDATE",
+                    saved.getId(),
+                    saved);
+
+        } else {
+
+            saved = productRepository.save(product);
+
+            eventProducer.publish(
+                    "PRODUCT",
+                    "CREATE",
+                    saved.getId(),
+                    saved);
+        }
+
+        return saved;
     }
 }

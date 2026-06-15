@@ -1,7 +1,6 @@
 package com.inventory.service;
 
 import com.inventory.cache.CacheProvider;
-import com.inventory.dto.SupplierRequest;
 import com.inventory.entity.Supplier;
 import com.inventory.event.EntityType;
 import com.inventory.event.EventAction;
@@ -38,26 +37,6 @@ public class SupplierService {
 
     @Qualifier("redisCacheProvider")
     private final CacheProvider redisCache;
-
-    public Supplier create(SupplierRequest request) {
-
-        Supplier supplier = Supplier.builder()
-                .name(request.getName())
-                .email(request.getEmail())
-                .phone(request.getPhone())
-                .build();
-
-        Supplier saved = supplierRepository.save(supplier);
-
-        cacheOnWrite(saved);
-        eventProducer.publish(
-                EntityType.SUPPLIER,
-                EventAction.CREATE,
-                saved.getId(),
-                saved);
-
-        return saved;
-    }
 
     @Transactional(readOnly = true)
     public List<Supplier> getAll(int offset, int limit) {
@@ -110,26 +89,6 @@ public class SupplierService {
         return supplier;
     }
 
-    public Supplier update(Long id, SupplierRequest request) {
-
-        Supplier supplier = loadById(id);
-
-        supplier.setName(request.getName());
-        supplier.setEmail(request.getEmail());
-        supplier.setPhone(request.getPhone());
-
-        Supplier saved = supplierRepository.save(supplier);
-
-        cacheOnWrite(saved);
-        eventProducer.publish(
-                EntityType.SUPPLIER,
-                EventAction.UPDATE,
-                saved.getId(),
-                saved);
-
-        return saved;
-    }
-
     public void delete(Long id) {
 
         Supplier supplier = loadById(id);
@@ -172,7 +131,7 @@ public class SupplierService {
                         "Supplier not found"));
     }
 
-    public Supplier save(SupplierRequest request) {
+    public Supplier save(Supplier request) {
 
         Supplier supplier;
 
