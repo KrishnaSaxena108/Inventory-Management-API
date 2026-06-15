@@ -10,8 +10,10 @@ import com.inventory.kafka.InventoryEventProducer;
 import com.inventory.repository.SupplierRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.data.domain.Pageable;
 
 import java.util.List;
 
@@ -39,12 +41,11 @@ public class SupplierService {
 
     public Supplier create(SupplierRequest request) {
 
-        Supplier supplier =
-                Supplier.builder()
-                        .name(request.getName())
-                        .email(request.getEmail())
-                        .phone(request.getPhone())
-                        .build();
+        Supplier supplier = Supplier.builder()
+                .name(request.getName())
+                .email(request.getEmail())
+                .phone(request.getPhone())
+                .build();
 
         Supplier saved = supplierRepository.save(supplier);
 
@@ -59,16 +60,23 @@ public class SupplierService {
     }
 
     @Transactional(readOnly = true)
-    @SuppressWarnings("unchecked")
-    public List<Supplier> getAll() {
+    public List<Supplier> getAll(int offset, int limit) {
 
-        Object cached = readCache.get(KEY_ALL);
-        if (cached instanceof List) {
+        String cacheKey = KEY_ALL + ":" + offset + ":" + limit;
+
+        Object cached = readCache.get(cacheKey);
+
+        if (cached instanceof List<?>) {
             return (List<Supplier>) cached;
         }
 
-        List<Supplier> suppliers = supplierRepository.findAll();
-        readCache.put(KEY_ALL, suppliers);
+        Pageable pageable = PageRequest.of(offset / limit, limit);
+
+        List<Supplier> suppliers = supplierRepository.findAll(pageable)
+                .getContent();
+
+        readCache.put(cacheKey, suppliers);
+
         return suppliers;
     }
 
@@ -128,8 +136,7 @@ public class SupplierService {
 
     private Supplier loadById(Long id) {
         return supplierRepository.findById(id)
-                .orElseThrow(() ->
-                        new ResourceNotFoundException(
-                                "Supplier not found"));
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Supplier not found"));
     }
 }

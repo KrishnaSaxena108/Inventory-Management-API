@@ -27,10 +27,11 @@ public class SupplierController {
     }
 
     @GetMapping
-    public ResponseEntity<List<Supplier>> getAll() {
+    public ResponseEntity<List<Supplier>> getAll(@RequestParam(defaultValue = "0") int offset,
+        @RequestParam(defaultValue = "10") int limit) {
 
         return ResponseEntity.ok(
-                supplierService.getAll());
+                supplierService.getAll(offset, limit));
     }
 
     @GetMapping("/{id}")
