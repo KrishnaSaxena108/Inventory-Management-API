@@ -67,7 +67,6 @@ inventory-management-api/
 │       │       ├── service/        # Business logic layer
 │       │       ├── repository/     # JPA repositories (DB layer)
 │       │       ├── entity/         # JPA entity classes
-│       │       ├── dto/            # Data Transfer Objects
 │       │       ├── exception/      # Custom exception handlers
 │       │       ├── util/           # Utility/helper classes
 │       │       └── InventoryApplication.java
