@@ -7,8 +7,8 @@ import com.inventory.event.EntityType;
 import com.inventory.event.EventAction;
 import com.inventory.exception.ResourceNotFoundException;
 import com.inventory.kafka.InventoryEventProducer;
-import com.inventory.repository.ProductRepository;
-import com.inventory.repository.SupplierRepository;
+import com.inventory.repository.GenericRepository;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
@@ -29,8 +29,8 @@ public class ProductService {
     private static final String KEY_PREFIX = "product::";
     private static final String KEY_ALL = "product::all";
 
-    private final ProductRepository productRepository;
-    private final SupplierRepository supplierRepository;
+    private final GenericRepository<Product> productRepository;
+    private final GenericRepository<Supplier> supplierRepository;
     private final InventoryEventProducer eventProducer;
 
     @Qualifier("redisCacheProvider")
@@ -44,7 +44,7 @@ public class ProductService {
             return (List<Product>) cached;
         }
 
-        List<Product> products = productRepository.findAll();
+        List<Product> products = productRepository.findAll(Product.class);
         cache.put(KEY_ALL, products);
         return products;
     }
@@ -77,13 +77,13 @@ public class ProductService {
     }
 
     private Product loadById(Long id) {
-        return productRepository.findById(id)
+        return productRepository.findById(Product.class, id)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Product not found"));
     }
 
     private Supplier findSupplier(Long supplierId) {
-        return supplierRepository.findById(supplierId)
+        return supplierRepository.findById(Supplier.class, supplierId)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Supplier not found"));
     }
@@ -93,9 +93,9 @@ public class ProductService {
         Product saved;
 
         if (product.getId() != null &&
-                productRepository.existsById(product.getId())) {
+                productRepository.existsById(Product.class, product.getId())) {
 
-            Product existing = productRepository.findById(product.getId())
+            Product existing = productRepository.findById(Product.class, product.getId())
                     .orElseThrow(() -> new ResourceNotFoundException(
                             "Product not found"));
 

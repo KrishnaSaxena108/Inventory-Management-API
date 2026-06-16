@@ -6,11 +6,10 @@ import com.inventory.event.EntityType;
 import com.inventory.event.EventAction;
 import com.inventory.exception.ResourceNotFoundException;
 import com.inventory.kafka.InventoryEventProducer;
-import com.inventory.repository.SupplierRepository;
+import com.inventory.repository.GenericRepository;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,7 +23,7 @@ public class SupplierService {
         private static final String KEY_PREFIX = "supplier::";
         private static final String KEY_ALL = "supplier::all";
 
-        private final SupplierRepository supplierRepository;
+        private final GenericRepository<Supplier> supplierRepository;
         private final InventoryEventProducer eventProducer;
 
         @Qualifier("lruCacheProvider")
@@ -87,9 +86,10 @@ public class SupplierService {
                                 "DATABASE HIT -> Suppliers Page " +
                                                 offset + "," + limit);
 
-                Pageable pageable = PageRequest.of(offset / limit, limit);
-
-                List<Supplier> suppliers = supplierRepository.findAll(pageable).getContent();
+                List<Supplier> suppliers = supplierRepository.findAll(
+                                Supplier.class,
+                                offset,
+                                limit);
 
                 redisCache.put(cacheKey, suppliers);
 
@@ -218,7 +218,7 @@ public class SupplierService {
 
         private Supplier loadById(Long id) {
 
-                return supplierRepository.findById(id)
+                return supplierRepository.findById(Supplier.class, id)
                                 .orElseThrow(() -> new ResourceNotFoundException(
                                                 "Supplier not found"));
         }
@@ -228,9 +228,9 @@ public class SupplierService {
                 Supplier supplier;
 
                 if (request.getId() != null &&
-                                supplierRepository.existsById(request.getId())) {
+                                supplierRepository.existsById(Supplier.class, request.getId())) {
 
-                        supplier = supplierRepository.findById(request.getId())
+                        supplier = supplierRepository.findById(Supplier.class, request.getId())
                                         .orElseThrow(() -> new ResourceNotFoundException(
                                                         "Supplier not found"));
 

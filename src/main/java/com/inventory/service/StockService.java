@@ -6,8 +6,8 @@ import com.inventory.entity.Stock;
 import com.inventory.exception.BadRequestException;
 import com.inventory.exception.ResourceNotFoundException;
 import com.inventory.kafka.InventoryEventProducer;
-import com.inventory.repository.ProductRepository;
-import com.inventory.repository.StockRepository;
+import com.inventory.repository.GenericRepository;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
@@ -22,278 +22,275 @@ import java.util.List;
 @Transactional
 public class StockService {
 
-    private static final String KEY_PREFIX = "stock::";
-    private static final String KEY_ALL = "stock::all";
-    private static final String KEY_PRODUCT = "stock::product::";
-    private static final String KEY_LEVEL = "stock::level::";
+        private static final String KEY_PREFIX = "stock::";
+        private static final String KEY_ALL = "stock::all";
+        private static final String KEY_PRODUCT = "stock::product::";
+        private static final String KEY_LEVEL = "stock::level::";
 
-    private final StockRepository stockRepository;
-    private final ProductRepository productRepository;
-    private final InventoryEventProducer eventProducer;
+        private final GenericRepository<Stock> stockRepository;
+        private final GenericRepository<Product> productRepository;
+        private final InventoryEventProducer eventProducer;
 
-    @Qualifier("caffeineCacheProvider")
-    private final CacheProvider readCache;
+        @Qualifier("caffeineCacheProvider")
+        private final CacheProvider readCache;
 
-    @Qualifier("redisCacheProvider")
-    private final CacheProvider redisCache;
+        @Qualifier("redisCacheProvider")
+        private final CacheProvider redisCache;
 
-    @Transactional(readOnly = true)
-    @SuppressWarnings("unchecked")
-    public List<Stock> getAll() {
+        @Transactional(readOnly = true)
+        @SuppressWarnings("unchecked")
+        public List<Stock> getAll() {
 
-        Object cached = readCache.get(KEY_ALL);
+                Object cached = readCache.get(KEY_ALL);
 
-        if (cached instanceof List<?>) {
-            return (List<Stock>) cached;
+                if (cached instanceof List<?>) {
+                        return (List<Stock>) cached;
+                }
+
+                List<Stock> stocks = stockRepository.findAll(Stock.class);
+
+                readCache.put(KEY_ALL, stocks);
+
+                return stocks;
         }
 
-        List<Stock> stocks = stockRepository.findAll();
+        @Transactional(readOnly = true)
+        public Stock getById(Long id) {
 
-        readCache.put(KEY_ALL, stocks);
+                Object cached = readCache.get(KEY_PREFIX + id);
 
-        return stocks;
-    }
+                if (cached instanceof Stock) {
+                        return (Stock) cached;
+                }
 
-    @Transactional(readOnly = true)
-    public Stock getById(Long id) {
+                Stock stock = stockRepository.findById(Stock.class, id)
+                                .orElseThrow(() -> new ResourceNotFoundException("Stock not found"));
 
-        Object cached = readCache.get(KEY_PREFIX + id);
+                readCache.put(KEY_PREFIX + id, stock);
 
-        if (cached instanceof Stock) {
-            return (Stock) cached;
+                return stock;
         }
 
-        Stock stock = stockRepository.findById(id)
-                .orElseThrow(() ->
-                        new ResourceNotFoundException("Stock not found"));
+        public Stock save(Stock stock) {
 
-        readCache.put(KEY_PREFIX + id, stock);
+                Product product = productRepository
+                                .findById(
+                                                Product.class,
+                                                stock.getProduct().getId())
+                                .orElseThrow(() -> new ResourceNotFoundException("Product not found"));
 
-        return stock;
-    }
+                Stock saved;
 
-    public Stock save(Stock stock) {
+                if (stock.getId() != null
+                                && stockRepository.existsById(
+                                                Stock.class,
+                                                stock.getId())) {
 
-        Product product = productRepository.findById(
-                stock.getProduct().getId())
-                .orElseThrow(() ->
-                        new ResourceNotFoundException("Product not found"));
+                        Stock existing = stockRepository
+                                        .findById(
+                                                        Stock.class,
+                                                        stock.getId())
+                                        .orElseThrow(() -> new ResourceNotFoundException("Stock not found"));
 
-        Stock saved;
+                        existing.setQuantity(stock.getQuantity());
+                        existing.setProduct(product);
+                        existing.setLastUpdated(LocalDateTime.now());
 
-        if (stock.getId() != null &&
-                stockRepository.existsById(stock.getId())) {
+                        saved = stockRepository.save(existing);
 
-            Stock existing = stockRepository.findById(stock.getId())
-                    .orElseThrow(() ->
-                            new ResourceNotFoundException("Stock not found"));
+                        eventProducer.publish(
+                                        "STOCK",
+                                        "UPDATE",
+                                        saved.getId(),
+                                        saved);
 
-            existing.setQuantity(stock.getQuantity());
-            existing.setProduct(product);
-            existing.setLastUpdated(LocalDateTime.now());
+                        System.out.println(
+                                        "KAFKA PRODUCED -> STOCK UPDATE -> "
+                                                        + saved.getId());
 
-            saved = stockRepository.save(existing);
+                } else {
 
-            eventProducer.publish(
-                    "STOCK",
-                    "UPDATE",
-                    saved.getId(),
-                    saved);
+                        stock.setProduct(product);
+                        stock.setLastUpdated(LocalDateTime.now());
 
-            System.out.println(
-                    "KAFKA PRODUCED -> STOCK UPDATE -> " +
-                            saved.getId());
+                        saved = stockRepository.save(stock);
 
-        } else {
+                        eventProducer.publish(
+                                        "STOCK",
+                                        "CREATE",
+                                        saved.getId(),
+                                        saved);
 
-            stock.setProduct(product);
-            stock.setLastUpdated(LocalDateTime.now());
+                        System.out.println(
+                                        "KAFKA PRODUCED -> STOCK CREATE -> "
+                                                        + saved.getId());
+                }
 
-            saved = stockRepository.save(stock);
+                cacheOnWrite(saved);
 
-            eventProducer.publish(
-                    "STOCK",
-                    "CREATE",
-                    saved.getId(),
-                    saved);
-
-            System.out.println(
-                    "KAFKA PRODUCED -> STOCK CREATE -> " +
-                            saved.getId());
+                return saved;
         }
 
-        cacheOnWrite(saved);
+        public Stock addStock(Long productId, Integer quantity) {
 
-        return saved;
-    }
+                Stock stock = loadByProduct(productId);
 
-    public Stock addStock(Long productId, Integer quantity) {
+                stock.setQuantity(
+                                stock.getQuantity() + quantity);
 
-        Stock stock = loadByProduct(productId);
+                stock.setLastUpdated(
+                                LocalDateTime.now());
 
-        stock.setQuantity(
-                stock.getQuantity() + quantity);
+                Stock saved = stockRepository.save(stock);
 
-        stock.setLastUpdated(
-                LocalDateTime.now());
+                cacheOnWrite(saved);
 
-        Stock saved =
-                stockRepository.save(stock);
+                eventProducer.publish(
+                                "STOCK",
+                                "ADD",
+                                saved.getId(),
+                                saved);
 
-        cacheOnWrite(saved);
-
-        eventProducer.publish(
-                "STOCK",
-                "ADD",
-                saved.getId(),
-                saved);
-
-        return saved;
-    }
-
-    public Stock reduceStock(Long productId,
-                             Integer quantity) {
-
-        Stock stock = loadByProduct(productId);
-
-        if (stock.getQuantity() < quantity) {
-            throw new BadRequestException(
-                    "Insufficient stock");
+                return saved;
         }
 
-        stock.setQuantity(
-                stock.getQuantity() - quantity);
+        public Stock reduceStock(Long productId,
+                        Integer quantity) {
 
-        stock.setLastUpdated(
-                LocalDateTime.now());
+                Stock stock = loadByProduct(productId);
 
-        Stock saved =
-                stockRepository.save(stock);
+                if (stock.getQuantity() < quantity) {
+                        throw new BadRequestException(
+                                        "Insufficient stock");
+                }
 
-        cacheOnWrite(saved);
+                stock.setQuantity(
+                                stock.getQuantity() - quantity);
 
-        eventProducer.publish(
-                "STOCK",
-                "REDUCE",
-                saved.getId(),
-                saved);
+                stock.setLastUpdated(
+                                LocalDateTime.now());
 
-        return saved;
-    }
+                Stock saved = stockRepository.save(stock);
 
-    public Stock receiveStock(Long productId,
-                              Integer quantity) {
+                cacheOnWrite(saved);
 
-        if (quantity <= 0) {
-            throw new BadRequestException(
-                    "Quantity must be greater than zero");
+                eventProducer.publish(
+                                "STOCK",
+                                "REDUCE",
+                                saved.getId(),
+                                saved);
+
+                return saved;
         }
 
-        Stock stock = loadByProduct(productId);
+        public Stock receiveStock(Long productId,
+                        Integer quantity) {
 
-        stock.setQuantity(
-                stock.getQuantity() + quantity);
+                if (quantity <= 0) {
+                        throw new BadRequestException(
+                                        "Quantity must be greater than zero");
+                }
 
-        stock.setLastUpdated(
-                LocalDateTime.now());
+                Stock stock = loadByProduct(productId);
 
-        Stock saved =
-                stockRepository.save(stock);
+                stock.setQuantity(
+                                stock.getQuantity() + quantity);
 
-        cacheOnWrite(saved);
+                stock.setLastUpdated(
+                                LocalDateTime.now());
 
-        eventProducer.publish(
-                "STOCK",
-                "RECEIVE",
-                saved.getId(),
-                saved);
+                Stock saved = stockRepository.save(stock);
 
-        return saved;
-    }
+                cacheOnWrite(saved);
 
-    @Transactional(readOnly = true)
-    public Integer checkLevel(Long productId) {
+                eventProducer.publish(
+                                "STOCK",
+                                "RECEIVE",
+                                saved.getId(),
+                                saved);
 
-        Object cached =
-                readCache.get(KEY_LEVEL + productId);
-
-        if (cached instanceof Integer) {
-            return (Integer) cached;
+                return saved;
         }
 
-        Stock stock =
-                loadByProduct(productId);
+        @Transactional(readOnly = true)
+        public Integer checkLevel(Long productId) {
 
-        readCache.put(
-                KEY_LEVEL + productId,
-                stock.getQuantity());
+                Object cached = readCache.get(KEY_LEVEL + productId);
 
-        return stock.getQuantity();
-    }
+                if (cached instanceof Integer) {
+                        return (Integer) cached;
+                }
 
-    @Transactional(readOnly = true)
-    public List<String> reorderAlerts() {
+                Stock stock = loadByProduct(productId);
 
-        List<String> alerts =
-                new ArrayList<>();
+                readCache.put(
+                                KEY_LEVEL + productId,
+                                stock.getQuantity());
 
-        List<Stock> stocks =
-                stockRepository.findAll();
-
-        for (Stock stock : stocks) {
-
-            Product product =
-                    stock.getProduct();
-
-            if (stock.getQuantity()
-                    <= product.getReorderLevel()) {
-
-                alerts.add(
-                        "REORDER REQUIRED : "
-                                + product.getName()
-                                + " Current Stock="
-                                + stock.getQuantity()
-                                + " Reorder Level="
-                                + product.getReorderLevel());
-            }
+                return stock.getQuantity();
         }
 
-        return alerts;
-    }
+        @Transactional(readOnly = true)
+        public List<String> reorderAlerts() {
 
-    private Stock loadByProduct(Long productId) {
+                List<String> alerts = new ArrayList<>();
 
-        return stockRepository.findByProductId(productId)
-                .orElseThrow(() ->
-                        new ResourceNotFoundException(
-                                "Stock not found"));
-    }
+                List<Stock> stocks = stockRepository.findAll(Stock.class);
 
-    private void cacheOnWrite(Stock saved) {
+                for (Stock stock : stocks) {
 
-        Long productId =
-                saved.getProduct().getId();
+                        Product product = stock.getProduct();
 
-        redisCache.put(
-                KEY_PREFIX + saved.getId(),
-                saved);
+                        if (stock.getQuantity() <= product.getReorderLevel()) {
 
-        readCache.put(
-                KEY_PREFIX + saved.getId(),
-                saved);
+                                alerts.add(
+                                                "REORDER REQUIRED : "
+                                                                + product.getName()
+                                                                + " Current Stock="
+                                                                + stock.getQuantity()
+                                                                + " Reorder Level="
+                                                                + product.getReorderLevel());
+                        }
+                }
 
-        readCache.evict(KEY_ALL);
+                return alerts;
+        }
 
-        readCache.put(
-                KEY_PRODUCT + productId,
-                saved);
+        private Stock loadByProduct(Long productId) {
 
-        readCache.put(
-                KEY_LEVEL + productId,
-                saved.getQuantity());
+                return stockRepository
+                                .findOne(
+                                                Stock.class,
+                                                "product.id",
+                                                productId)
+                                .orElseThrow(() -> new ResourceNotFoundException(
+                                                "Stock not found"));
+        }
 
-        redisCache.put(
-                KEY_PRODUCT + productId,
-                saved);
-    }
+        private void cacheOnWrite(Stock saved) {
+
+                Long productId = saved.getProduct().getId();
+
+                redisCache.put(
+                                KEY_PREFIX + saved.getId(),
+                                saved);
+
+                readCache.put(
+                                KEY_PREFIX + saved.getId(),
+                                saved);
+
+                readCache.evict(KEY_ALL);
+
+                readCache.put(
+                                KEY_PRODUCT + productId,
+                                saved);
+
+                readCache.put(
+                                KEY_LEVEL + productId,
+                                saved.getQuantity());
+
+                redisCache.put(
+                                KEY_PRODUCT + productId,
+                                saved);
+        }
 }
