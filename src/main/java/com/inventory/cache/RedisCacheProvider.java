@@ -28,24 +28,36 @@ public class RedisCacheProvider implements CacheProvider {
     @Override
     public Object get(String key) {
         try {
-            return redisTemplate.opsForValue().get(key);
+            Object value = redisTemplate.opsForValue().get(key);
+
+            if (value != null) {
+                log.info("REDIS HIT  -> {}", key);
+            } else {
+                log.info("REDIS MISS -> {}", key);
+            }
+
+            return value;
+
         } catch (Exception ex) {
-            log.warn("Redis GET failed for key {}: {}",
-                    key, ex.getMessage());
+            log.warn("Redis GET failed for key {}: {}", key, ex.getMessage());
             return null;
         }
     }
 
     @Override
     public void put(String key, Object value) {
+
         if (value == null) {
+            log.info("REDIS PUT SKIPPED -> {} (null value)", key);
             return;
         }
+
         try {
             redisTemplate.opsForValue().set(key, value, ttl);
+            log.info("REDIS PUT  -> {} (TTL = {} seconds)", key, ttl.getSeconds());
+
         } catch (Exception ex) {
-            log.warn("Redis PUT failed for key {}: {}",
-                    key, ex.getMessage());
+            log.warn("Redis PUT failed for key {}: {}", key, ex.getMessage());
         }
     }
 
@@ -53,9 +65,10 @@ public class RedisCacheProvider implements CacheProvider {
     public void evict(String key) {
         try {
             redisTemplate.delete(key);
+            log.info("REDIS DELETE -> {}", key);
+
         } catch (Exception ex) {
-            log.warn("Redis EVICT failed for key {}: {}",
-                    key, ex.getMessage());
+            log.warn("Redis EVICT failed for key {}: {}", key, ex.getMessage());
         }
     }
 

@@ -10,177 +10,269 @@ import com.inventory.repository.SupplierRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.data.domain.Pageable;
 
 import java.util.List;
 
-/**
- * Supplier fetch APIs are served from an in-process LRU cache, falling back
- * to the DAO on a cache miss or failure. Save/update APIs additionally write
- * the latest snapshot into the Redis distributed cache.
- */
 @Service
 @RequiredArgsConstructor
 @Transactional
 public class SupplierService {
 
-    private static final String KEY_PREFIX = "supplier::";
-    private static final String KEY_ALL = "supplier::all";
+        private static final String KEY_PREFIX = "supplier::";
+        private static final String KEY_ALL = "supplier::all";
 
-    private final SupplierRepository supplierRepository;
-    private final InventoryEventProducer eventProducer;
+        private final SupplierRepository supplierRepository;
+        private final InventoryEventProducer eventProducer;
 
-    @Qualifier("lruCacheProvider")
-    private final CacheProvider readCache;
+        @Qualifier("lruCacheProvider")
+        private final CacheProvider readCache;
 
-    @Qualifier("redisCacheProvider")
-    private final CacheProvider redisCache;
+        @Qualifier("redisCacheProvider")
+        private final CacheProvider redisCache;
 
-    @Transactional(readOnly = true)
-    public List<Supplier> getAll(int offset, int limit) {
+        @Transactional(readOnly = true)
+        public List<Supplier> getAll(int offset, int limit) {
 
-        String cacheKey = KEY_ALL + ":" + offset + ":" + limit;
+                String cacheKey = KEY_ALL + ":" + offset + ":" + limit;
 
-        Object cached = readCache.get(cacheKey);
+                // =========================
+                // 1. LRU Cache
+                // =========================
+                Object lruValue = readCache.get(cacheKey);
 
-        if (cached instanceof List<?>) {
+                if (lruValue instanceof List<?>) {
 
-            System.out.println(
-                    "LRU CACHE HIT -> Suppliers Page " +
-                            offset + "," + limit);
+                        System.out.println(
+                                        "LRU CACHE HIT -> Suppliers Page " +
+                                                        offset + "," + limit);
 
-            return (List<Supplier>) cached;
+                        return (List<Supplier>) lruValue;
+                }
+
+                System.out.println(
+                                "LRU CACHE MISS -> Suppliers Page " +
+                                                offset + "," + limit);
+
+                // =========================
+                // 2. Redis Cache
+                // =========================
+                Object redisValue = redisCache.get(cacheKey);
+
+                if (redisValue instanceof List<?>) {
+
+                        System.out.println(
+                                        "REDIS CACHE HIT -> Suppliers Page " +
+                                                        offset + "," + limit);
+
+                        readCache.put(cacheKey, redisValue);
+
+                        System.out.println(
+                                        "LRU CACHE UPDATED FROM REDIS -> Suppliers Page " +
+                                                        offset + "," + limit);
+
+                        return (List<Supplier>) redisValue;
+                }
+
+                System.out.println(
+                                "REDIS CACHE MISS -> Suppliers Page " +
+                                                offset + "," + limit);
+
+                // =========================
+                // 3. Database
+                // =========================
+                System.out.println(
+                                "DATABASE HIT -> Suppliers Page " +
+                                                offset + "," + limit);
+
+                Pageable pageable = PageRequest.of(offset / limit, limit);
+
+                List<Supplier> suppliers = supplierRepository.findAll(pageable).getContent();
+
+                redisCache.put(cacheKey, suppliers);
+
+                System.out.println(
+                                "REDIS CACHE UPDATED -> Suppliers Page " +
+                                                offset + "," + limit);
+
+                readCache.put(cacheKey, suppliers);
+
+                System.out.println(
+                                "LRU CACHE UPDATED -> Suppliers Page " +
+                                                offset + "," + limit);
+
+                return suppliers;
         }
 
-        System.out.println(
-                "DATABASE HIT -> Suppliers Page " +
-                        offset + "," + limit);
-        Pageable pageable = PageRequest.of(offset / limit, limit);
+        @Transactional(readOnly = true)
+        public Supplier getById(Long id) {
 
-        List<Supplier> suppliers = supplierRepository.findAll(pageable)
-                .getContent();
+                String key = KEY_PREFIX + id;
 
-        readCache.put(cacheKey, suppliers);
+                // =========================
+                // 1. LRU Cache
+                // =========================
+                Object lruValue = readCache.get(key);
 
-        return suppliers;
-    }
+                if (lruValue instanceof Supplier) {
 
-    @Transactional(readOnly = true)
-    public Supplier getById(Long id) {
+                        System.out.println(
+                                        "LRU CACHE HIT -> Supplier " + id);
 
-        Object cached = readCache.get(KEY_PREFIX + id);
-        if (cached instanceof Supplier) {
+                        return (Supplier) lruValue;
+                }
 
-            System.out.println(
-                    "LRU CACHE HIT -> Supplier " + id);
+                System.out.println(
+                                "LRU CACHE MISS -> Supplier " + id);
 
-            return (Supplier) cached;
+                // =========================
+                // 2. Redis Cache
+                // =========================
+                Object redisValue = redisCache.get(key);
+
+                if (redisValue instanceof Supplier) {
+
+                        System.out.println(
+                                        "REDIS CACHE HIT -> Supplier " + id);
+
+                        readCache.put(key, redisValue);
+
+                        System.out.println(
+                                        "LRU CACHE UPDATED FROM REDIS -> Supplier " + id);
+
+                        return (Supplier) redisValue;
+                }
+
+                System.out.println(
+                                "REDIS CACHE MISS -> Supplier " + id);
+
+                // =========================
+                // 3. Database
+                // =========================
+                System.out.println(
+                                "DATABASE HIT -> Supplier " + id);
+
+                Supplier supplier = loadById(id);
+
+                redisCache.put(key, supplier);
+
+                System.out.println(
+                                "REDIS CACHE UPDATED -> Supplier " + id);
+
+                readCache.put(key, supplier);
+
+                System.out.println(
+                                "LRU CACHE UPDATED -> Supplier " + id);
+
+                return supplier;
         }
 
-        System.out.println(
-                "CACHE MISS -> Supplier " + id);
+        public void delete(Long id) {
 
-        System.out.println(
-                "DATABASE HIT -> Supplier " + id);
-        Supplier supplier = loadById(id);
-        readCache.put(KEY_PREFIX + id, supplier);
-        return supplier;
-    }
+                Supplier supplier = loadById(id);
 
-    public void delete(Long id) {
+                supplierRepository.delete(supplier);
 
-        Supplier supplier = loadById(id);
-        supplierRepository.delete(supplier);
+                String key = KEY_PREFIX + id;
 
-        readCache.evict(KEY_PREFIX + id);
-        readCache.evict(KEY_ALL);
-        redisCache.evict(KEY_PREFIX + id);
-        eventProducer.publish(
-                EntityType.SUPPLIER,
-                EventAction.DELETE,
-                id,
-                null);
-    }
+                // Remove from both caches
+                readCache.evict(key);
+                redisCache.evict(key);
 
-    private void cacheOnWrite(Supplier saved) {
+                // Remove paginated cache entries
+                readCache.evict(KEY_ALL);
+                redisCache.evict(KEY_ALL);
 
-        redisCache.put(
-                KEY_PREFIX + saved.getId(),
-                saved);
+                eventProducer.publish(
+                                EntityType.SUPPLIER,
+                                EventAction.DELETE,
+                                id,
+                                null);
 
-        System.out.println(
-                "REDIS CACHE UPDATED -> " +
-                        KEY_PREFIX + saved.getId());
-
-        readCache.put(
-                KEY_PREFIX + saved.getId(),
-                saved);
-
-        System.out.println(
-                "LRU CACHE UPDATED -> " +
-                        KEY_PREFIX + saved.getId());
-
-        readCache.evict(KEY_ALL);
-    }
-
-    private Supplier loadById(Long id) {
-        return supplierRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        "Supplier not found"));
-    }
-
-    public Supplier save(Supplier request) {
-
-        Supplier supplier;
-
-        if (request.getId() != null &&
-                supplierRepository.existsById(request.getId())) {
-
-            supplier = supplierRepository.findById(request.getId())
-                    .orElseThrow(() -> new ResourceNotFoundException(
-                            "Supplier not found"));
-
-            supplier.setName(request.getName());
-            supplier.setEmail(request.getEmail());
-            supplier.setPhone(request.getPhone());
-
-            supplier = supplierRepository.save(supplier);
-
-            eventProducer.publish(
-                    "SUPPLIER",
-                    "UPDATE",
-                    supplier.getId(),
-                    supplier);
-
-            System.out.println(
-                    "SUPPLIER UPDATED -> " +
-                            supplier.getId());
-
-        } else {
-
-            supplier = Supplier.builder()
-                    .name(request.getName())
-                    .email(request.getEmail())
-                    .phone(request.getPhone())
-                    .build();
-
-            supplier = supplierRepository.save(supplier);
-
-            eventProducer.publish(
-                    "SUPPLIER",
-                    "CREATE",
-                    supplier.getId(),
-                    supplier);
-
-            System.out.println(
-                    "SUPPLIER CREATED -> " +
-                            supplier.getId());
+                System.out.println(
+                                "SUPPLIER DELETED -> " + id);
         }
 
-        cacheOnWrite(supplier);
+        private void cacheOnWrite(Supplier supplier) {
 
-        return supplier;
-    }
+                String key = KEY_PREFIX + supplier.getId();
+
+                // Update Redis first
+                redisCache.put(key, supplier);
+
+                System.out.println(
+                                "REDIS CACHE UPDATED -> " + key);
+
+                // Update LRU
+                readCache.put(key, supplier);
+
+                System.out.println(
+                                "LRU CACHE UPDATED -> " + key);
+
+                // Clear paginated cache
+                readCache.evict(KEY_ALL);
+                redisCache.evict(KEY_ALL);
+        }
+
+        private Supplier loadById(Long id) {
+
+                return supplierRepository.findById(id)
+                                .orElseThrow(() -> new ResourceNotFoundException(
+                                                "Supplier not found"));
+        }
+
+        public Supplier save(Supplier request) {
+
+                Supplier supplier;
+
+                if (request.getId() != null &&
+                                supplierRepository.existsById(request.getId())) {
+
+                        supplier = supplierRepository.findById(request.getId())
+                                        .orElseThrow(() -> new ResourceNotFoundException(
+                                                        "Supplier not found"));
+
+                        supplier.setName(request.getName());
+                        supplier.setEmail(request.getEmail());
+                        supplier.setPhone(request.getPhone());
+
+                        supplier = supplierRepository.save(supplier);
+
+                        eventProducer.publish(
+                                        EntityType.SUPPLIER,
+                                        EventAction.UPDATE,
+                                        supplier.getId(),
+                                        supplier);
+
+                        System.out.println(
+                                        "SUPPLIER UPDATED -> " +
+                                                        supplier.getId());
+
+                } else {
+
+                        supplier = Supplier.builder()
+                                        .name(request.getName())
+                                        .email(request.getEmail())
+                                        .phone(request.getPhone())
+                                        .build();
+
+                        supplier = supplierRepository.save(supplier);
+
+                        eventProducer.publish(
+                                        EntityType.SUPPLIER,
+                                        EventAction.CREATE,
+                                        supplier.getId(),
+                                        supplier);
+
+                        System.out.println(
+                                        "SUPPLIER CREATED -> " +
+                                                        supplier.getId());
+                }
+
+                cacheOnWrite(supplier);
+
+                return supplier;
+        }
 }
