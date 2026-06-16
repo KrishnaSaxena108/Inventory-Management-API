@@ -1,688 +1,354 @@
-# Inventory Management API
+<div align="center">
 
-A RESTful Inventory Management System built using **Spring Boot**, **Spring Data JPA**, **Hibernate**, **MySQL**, **Lombok**, and **HikariCP**.
+# 📦 Inventory Management API
 
-The application provides inventory tracking, stock management, supplier management, reorder alerts, and inventory validation to prevent negative stock levels.
+**A production-ready RESTful API for managing products, suppliers, and stock — built with Spring Boot & MySQL.**
 
----
+[![Java](https://img.shields.io/badge/Java-17+-ED8B00?style=for-the-badge&logo=openjdk&logoColor=white)](https://www.oracle.com/java/)
+[![Spring Boot](https://img.shields.io/badge/Spring_Boot-3.x-6DB33F?style=for-the-badge&logo=springboot&logoColor=white)](https://spring.io/projects/spring-boot)
+[![MySQL](https://img.shields.io/badge/MySQL-8.x-4479A1?style=for-the-badge&logo=mysql&logoColor=white)](https://www.mysql.com/)
+[![Maven](https://img.shields.io/badge/Maven-Build-C71A36?style=for-the-badge&logo=apachemaven&logoColor=white)](https://maven.apache.org/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](LICENSE)
 
-# Features
+[Features](#-features) • [Tech Stack](#-tech-stack) • [Getting Started](#-getting-started) • [API Reference](#-api-reference) • [Workflow](#-end-to-end-workflow) • [Contributing](#-contributing)
 
-## Product Management
-
-* Create Product
-* View Product
-* Update Product
-* Delete Product
-
-## Supplier Management
-
-* Create Supplier
-* View Supplier
-* Update Supplier
-* Delete Supplier
-
-## Inventory Management
-
-* Add Stock
-* Reduce Stock
-* Receive Stock
-* Check Current Inventory Level
-
-## Business Rules
-
-* Prevent Negative Inventory
-* Reorder Alert Generation
-* Inventory Tracking
-* Supplier Association
+</div>
 
 ---
 
-# Tech Stack
+## 📋 Overview
 
-| Technology      | Version                 |
-| --------------- | ----------------------- |
-| Java            | 17+                     |
-| Spring Boot     | 3.x                     |
-| Spring Data JPA | Latest                  |
-| Hibernate       | ORM                     |
-| MySQL           | 8.x                     |
-| Lombok          | Latest                  |
-| Maven           | Latest                  |
-| HikariCP        | Default Connection Pool |
+The **Inventory Management API** is a backend REST service designed to help businesses track products, manage suppliers, and control stock levels in real time. It enforces business rules like **negative stock prevention** and **automatic reorder alerts** to keep your inventory data accurate and reliable.
+
+> Built with **Spring Boot 3**, **Spring Data JPA**, **Hibernate ORM**, **MySQL 8**, **Lombok**, and **HikariCP** connection pooling.
 
 ---
 
-# Project Structure
+## ✨ Features
 
-```text
-inventory-management-api
+| Module | Capabilities |
+|---|---|
+| 🏷️ **Product Management** | Create, Read, Update, Delete products |
+| 🏭 **Supplier Management** | Create, Read, Update, Delete suppliers |
+| 📊 **Stock Management** | Add, reduce, receive stock; check inventory levels |
+| 🔔 **Reorder Alerts** | Auto-flag products that fall below reorder threshold |
+| 🛡️ **Inventory Validation** | Prevents stock from going negative — ever |
+| ⚡ **Connection Pooling** | HikariCP for high-performance DB connections |
+
+---
+
+## 🛠️ Tech Stack
+
+| Technology | Version | Purpose |
+|---|---|---|
+| Java | 17+ | Core language |
+| Spring Boot | 3.x | Application framework |
+| Spring Data JPA | Latest | Data access layer |
+| Hibernate | ORM | Object-relational mapping |
+| MySQL | 8.x | Relational database |
+| Lombok | Latest | Boilerplate reduction |
+| HikariCP | Default | Connection pooling |
+| Maven | Latest | Build & dependency management |
+
+---
+
+## 🗂️ Project Structure
+
+```
+inventory-management-api/
 │
-├── pom.xml
+├── pom.xml                         # Maven dependencies & build config
 │
-├── src
-│   └── main
-│       ├── java
-│       │   └── com.inventory
-│       │       ├── controller
-│       │       ├── service
-│       │       ├── repository
-│       │       ├── entity
-│       │       ├── dto
-│       │       ├── exception
-│       │       ├── util
+├── src/
+│   └── main/
+│       ├── java/
+│       │   └── com/inventory/
+│       │       ├── controller/     # REST controllers (API layer)
+│       │       ├── service/        # Business logic layer
+│       │       ├── repository/     # JPA repositories (DB layer)
+│       │       ├── entity/         # JPA entity classes
+│       │       ├── exception/      # Custom exception handlers
+│       │       ├── util/           # Utility/helper classes
 │       │       └── InventoryApplication.java
 │       │
-│       └── resources
-│           └── application.properties
+│       └── resources/
+│           └── application.properties   # App & DB configuration
 │
 └── README.md
 ```
 
 ---
 
-# Database Setup
+## 🚀 Getting Started
 
-Login to MySQL:
+### Prerequisites
+
+Make sure you have the following installed:
+
+- ☕ [Java 17+](https://adoptium.net/)
+- 🐬 [MySQL 8.x](https://dev.mysql.com/downloads/)
+- 📦 [Maven 3.x](https://maven.apache.org/download.cgi)
+- 🛠️ [Git](https://git-scm.com/)
+
+---
+
+### 1️⃣ Clone the Repository
+
+```bash
+git clone https://github.com/KrishnaSaxena108/Inventory-Management-API.git
+cd Inventory-Management-API
+```
+
+---
+
+### 2️⃣ Set Up the Database
+
+Log into MySQL and create the database:
 
 ```sql
 mysql -u root -p
-```
 
-Create Database:
-
-```sql
 CREATE DATABASE inventory_db;
-```
-
-Verify:
-
-```sql
-SHOW DATABASES;
-```
-
-Use Database:
-
-```sql
+SHOW DATABASES;   -- verify it's there
 USE inventory_db;
 ```
 
 ---
 
-# Configuration
+### 3️⃣ Configure the Application
 
-Update `application.properties`
+Edit `src/main/resources/application.properties`:
 
 ```properties
 server.port=8080
 
+# Database
 spring.datasource.url=jdbc:mysql://localhost:3306/inventory_db
 spring.datasource.username=root
 spring.datasource.password=YOUR_PASSWORD
 
+# JPA / Hibernate
 spring.jpa.hibernate.ddl-auto=update
 spring.jpa.show-sql=true
 spring.jpa.properties.hibernate.format_sql=true
 ```
 
+> ⚠️ **Never commit real credentials.** Use environment variables or a `.env` file in production.
+
 ---
 
-# Build Project
+### 4️⃣ Build & Run
 
-Clean Project:
-
-```bash
-mvn clean
-```
-
-Compile:
-
-```bash
-mvn compile
-```
-
-Package:
+**Build the project:**
 
 ```bash
 mvn clean install
 ```
 
----
-
-# Run Application
-
-Using Maven:
+**Run with Maven:**
 
 ```bash
 mvn spring-boot:run
 ```
 
-Using JAR:
+**Or run the JAR directly:**
 
 ```bash
 java -jar target/inventory-management-api-1.0.0.jar
 ```
 
-Successful startup:
+**Successful startup looks like:**
 
-```text
+```
 Tomcat started on port(s): 8080
-Started InventoryApplication
+Started InventoryApplication in X.XXX seconds
 ```
+
+The API is now live at: **`http://localhost:8080`**
 
 ---
 
-# API Endpoints
+## 📡 API Reference
 
-## Supplier APIs
+Base URL: `http://localhost:8080`
 
-### Create Supplier
+---
 
-POST
+### 🏭 Supplier Endpoints
 
-```http
-/api/suppliers
-```
+| Method | Endpoint | Description |
+|---|---|---|
+| `POST` | `/api/suppliers` | Create a new supplier |
+| `GET` | `/api/suppliers` | Get all suppliers |
+| `GET` | `/api/suppliers/{id}` | Get supplier by ID |
+| `PUT` | `/api/suppliers/{id}` | Update supplier |
+| `DELETE` | `/api/suppliers/{id}` | Delete supplier |
 
-Request:
+**Create Supplier — Request Body:**
 
 ```json
 {
-  "name":"Dell Supplier",
-  "email":"dell@gmail.com",
-  "phone":"9999999999"
+  "name": "Dell Supplier",
+  "email": "dell@gmail.com",
+  "phone": "9999999999"
 }
 ```
 
 ---
 
-### Get All Suppliers
+### 🏷️ Product Endpoints
 
-GET
+| Method | Endpoint | Description |
+|---|---|---|
+| `POST` | `/api/products` | Create a new product |
+| `GET` | `/api/products` | Get all products |
+| `GET` | `/api/products/{id}` | Get product by ID |
+| `PUT` | `/api/products/{id}` | Update product |
+| `DELETE` | `/api/products/{id}` | Delete product |
 
-```http
-/api/suppliers
-```
-
----
-
-### Get Supplier By ID
-
-GET
-
-```http
-/api/suppliers/{id}
-```
-
----
-
-### Update Supplier
-
-PUT
-
-```http
-/api/suppliers/{id}
-```
-
----
-
-### Delete Supplier
-
-DELETE
-
-```http
-/api/suppliers/{id}
-```
-
----
-
-# Product APIs
-
-### Create Product
-
-POST
-
-```http
-/api/products
-```
-
-Request:
+**Create Product — Request Body:**
 
 ```json
 {
-  "name":"Dell Laptop",
-  "description":"Latitude 7440",
-  "reorderLevel":10,
-  "supplierId":1
+  "name": "Dell Laptop",
+  "description": "Latitude 7440",
+  "reorderLevel": 10,
+  "supplierId": 1
 }
 ```
 
 ---
 
-### Get All Products
+### 📊 Stock Endpoints
 
-GET
+| Method | Endpoint | Description |
+|---|---|---|
+| `POST` | `/api/stocks` | Initialize stock for a product |
+| `GET` | `/api/stocks` | Get all stock records |
+| `PUT` | `/api/stocks/add/{productId}?quantity=N` | Add stock |
+| `PUT` | `/api/stocks/reduce/{productId}?quantity=N` | Reduce stock |
+| `PUT` | `/api/stocks/receive/{productId}?quantity=N` | Receive new inventory |
+| `GET` | `/api/stocks/check/{productId}` | Check current stock level |
+| `GET` | `/api/stocks/reorder-alerts` | Get all products needing reorder |
 
-```http
-/api/products
-```
-
----
-
-### Get Product By ID
-
-GET
-
-```http
-/api/products/{id}
-```
-
----
-
-### Update Product
-
-PUT
-
-```http
-/api/products/{id}
-```
-
----
-
-### Delete Product
-
-DELETE
-
-```http
-/api/products/{id}
-```
-
----
-
-# Stock APIs
-
-### Create Initial Stock
-
-POST
-
-```http
-/api/stocks
-```
-
-Request:
+**Initialize Stock — Request Body:**
 
 ```json
 {
-  "productId":1,
-  "quantity":100
+  "productId": 1,
+  "quantity": 100
 }
 ```
 
 ---
 
-### Get All Stocks
+## 🔄 End-to-End Workflow
 
-GET
-
-```http
-/api/stocks
-```
-
----
-
-### Add Stock
-
-PUT
-
-```http
-/api/stocks/add/{productId}?quantity=50
-```
-
----
-
-### Reduce Stock
-
-PUT
-
-```http
-/api/stocks/reduce/{productId}?quantity=20
-```
-
----
-
-### Receive Inventory
-
-PUT
-
-```http
-/api/stocks/receive/{productId}?quantity=100
-```
-
----
-
-### Check Inventory Level
-
-GET
-
-```http
-/api/stocks/check/{productId}
-```
-
----
-
-### Reorder Alerts
-
-GET
-
-```http
-/api/stocks/reorder-alerts
-```
-
----
-
-# Complete Workflow Testing
-
-## Step 1
-
-Create Supplier
-
-```json
-{
-  "name":"Dell Supplier",
-  "email":"dell@gmail.com",
-  "phone":"9999999999"
-}
-```
-
-Response:
-
-```json
-{
-  "id":1
-}
-```
-
----
-
-## Step 2
-
-Create Product
-
-```json
-{
-  "name":"Dell Laptop",
-  "description":"Latitude 7440",
-  "reorderLevel":10,
-  "supplierId":1
-}
-```
-
-Response:
-
-```json
-{
-  "id":1
-}
-```
-
----
-
-## Step 3
-
-Create Stock
-
-```json
-{
-  "productId":1,
-  "quantity":100
-}
-```
-
----
-
-## Step 4
-
-Check Inventory
-
-```http
-GET /api/stocks/check/1
-```
-
-Expected:
-
-```json
-100
-```
-
----
-
-## Step 5
-
-Reduce Stock
-
-```http
-PUT /api/stocks/reduce/1?quantity=95
-```
-
-Expected Inventory:
-
-```json
-5
-```
-
----
-
-## Step 6
-
-Check Reorder Alert
-
-```http
-GET /api/stocks/reorder-alerts
-```
-
-Expected:
-
-```json
-[
-  "REORDER REQUIRED : Dell Laptop Current Stock=5 Reorder Level=10"
-]
-```
-
----
-
-## Step 7
-
-Receive New Inventory
-
-```http
-PUT /api/stocks/receive/1?quantity=50
-```
-
-Expected Inventory:
-
-```json
-55
-```
-
----
-
-# Negative Inventory Validation
-
-Current Inventory:
-
-```json
-10
-```
-
-Request:
-
-```http
-PUT /api/stocks/reduce/1?quantity=20
-```
-
-Response:
-
-```json
-{
-  "status":400,
-  "message":"Negative inventory not allowed"
-}
-```
-
-This validation ensures stock quantity never becomes negative.
-
----
-
-# Testing Using Terminal (cURL)
-
-Create Supplier:
+Here's a full example to test the system from scratch:
 
 ```bash
-curl -X POST http://localhost:8080/api/suppliers ^
--H "Content-Type: application/json" ^
--d "{\"name\":\"Dell Supplier\",\"email\":\"dell@gmail.com\",\"phone\":\"9999999999\"}"
-```
+# Step 1 — Create a supplier
+curl -X POST http://localhost:8080/api/suppliers \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Dell Supplier","email":"dell@gmail.com","phone":"9999999999"}'
 
-Get Suppliers:
+# Step 2 — Create a product linked to supplier ID 1
+curl -X POST http://localhost:8080/api/products \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Dell Laptop","description":"Latitude 7440","reorderLevel":10,"supplierId":1}'
 
-```bash
-curl http://localhost:8080/api/suppliers
-```
+# Step 3 — Initialize stock (100 units)
+curl -X POST http://localhost:8080/api/stocks \
+  -H "Content-Type: application/json" \
+  -d '{"productId":1,"quantity":100}'
 
-Check Inventory:
-
-```bash
+# Step 4 — Check inventory
 curl http://localhost:8080/api/stocks/check/1
-```
+# Expected: 100
 
-Reorder Alerts:
+# Step 5 — Reduce stock by 95
+curl -X PUT "http://localhost:8080/api/stocks/reduce/1?quantity=95"
+# Expected: 5
 
-```bash
+# Step 6 — Check reorder alert (stock 5 < reorderLevel 10)
 curl http://localhost:8080/api/stocks/reorder-alerts
+# Expected: ["REORDER REQUIRED : Dell Laptop Current Stock=5 Reorder Level=10"]
+
+# Step 7 — Receive new inventory
+curl -X PUT "http://localhost:8080/api/stocks/receive/1?quantity=50"
+# Expected: 55
 ```
 
 ---
 
-# Business Rules Implemented
+## 🛡️ Business Rules
 
-* Product CRUD
-* Supplier CRUD
-* Stock CRUD
-* Inventory Tracking
-* Reorder Alerts
-* Stock Receiving
-* Stock Reduction
-* Negative Inventory Prevention
-* Exception Handling
-* Validation Support
+### Negative Inventory Prevention
 
----
-
-# Event Streaming & Caching
-
-The service embeds **both a Kafka producer and a Kafka consumer**, a
-**multi-backend distributed caching strategy**, and a dedicated
-**history table** that records every change.
-
-## Kafka (Producer + Consumer in the same service)
-
-Every create / update / delete (including stock add / reduce / receive)
-publishes an `InventoryEvent` to the `inventory-history-events` topic. A
-`@KafkaListener` in the same application consumes those events and persists
-them into the `inventory_history` table.
-
-```text
-Save/Update API ──► InventoryEventProducer ──► Kafka topic
-                                                   │
-                                                   ▼
-                                       InventoryEventConsumer
-                                                   │
-                                                   ▼
-                                         inventory_history table
-```
-
-The producer is failure tolerant: if the broker is unreachable the event is
-logged and the API call still succeeds.
-
-## Distributed Caching Strategy
-
-Each fetch endpoint reads from its assigned cache first and only calls the
-DAO on a **cache miss or backend failure**. Every save/update additionally
-writes the latest snapshot to **Redis**.
-
-| Domain   | Read cache | Backend                         |
-| -------- | ---------- | ------------------------------- |
-| Product  | Redis      | `spring-boot-starter-data-redis`|
-| Supplier | LRU        | in-process `LinkedHashMap` LRU  |
-| Stock    | Caffeine   | `com.github.ben-manes.caffeine` |
-
-All three implement a common `CacheProvider` interface whose `get`/`put`/
-`evict` operations never throw — backend errors degrade gracefully to a DAO
-call.
-
-## History APIs
-
-| Method | Endpoint                              | Description                       |
-| ------ | ------------------------------------- | --------------------------------- |
-| GET    | `/api/history`                        | All recorded history rows         |
-| GET    | `/api/history/{entityType}`           | History for `PRODUCT/STOCK/SUPPLIER` |
-| GET    | `/api/history/{entityType}/{entityId}`| History for a single entity       |
-
-## Configuration
-
-The following defaults are added to `application.properties` (override as
-needed):
-
-```properties
-# Redis
-spring.data.redis.host=localhost
-spring.data.redis.port=6379
-
-# Kafka
-spring.kafka.bootstrap-servers=localhost:9092
-app.kafka.topic=inventory-history-events
-app.kafka.group-id=inventory-history-group
-
-# Cache tuning
-app.cache.redis.ttl-seconds=600
-app.cache.lru.max-size=500
-app.cache.caffeine.max-size=500
-app.cache.caffeine.ttl-seconds=300
-```
-
-### Running the infrastructure (Docker)
+Attempting to reduce stock below zero returns a `400 Bad Request`:
 
 ```bash
-docker run -d --name redis -p 6379:6379 redis:7
-docker run -d --name kafka -p 9092:9092 \
-  -e KAFKA_CFG_NODE_ID=0 \
-  -e KAFKA_CFG_PROCESS_ROLES=controller,broker \
-  -e KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=0@kafka:9093 \
-  -e KAFKA_CFG_LISTENERS=PLAINTEXT://:9092,CONTROLLER://:9093 \
-  -e KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://localhost:9092 \
-  -e KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER \
-  bitnami/kafka:3.7
+# Current stock: 10 — trying to reduce by 20
+curl -X PUT "http://localhost:8080/api/stocks/reduce/1?quantity=20"
 ```
 
----
+```json
+{
+  "status": 400,
+  "message": "Negative inventory not allowed"
+}
+```
 
-# Future Enhancements
+### Reorder Alert Logic
 
-* Swagger/OpenAPI Documentation
-* Docker Support
-* JWT Authentication
-* Role Based Authorization
-* Inventory Transaction History
-* Email Notifications
-* Audit Logging
-* Unit Testing with JUnit & Mockito
-* Flyway Database Migrations
-* Pagination and Sorting
+When `currentStock < reorderLevel`, the product is flagged automatically in the `/api/stocks/reorder-alerts` endpoint — no manual checks needed.
 
 ---
 
-# Author
+## 🗺️ Roadmap
 
-Krishna
+- [ ] Swagger / OpenAPI documentation
+- [ ] Docker & Docker Compose support
+- [ ] JWT Authentication & role-based authorization
+- [ ] Inventory transaction history & audit logging
+- [ ] Email notifications for reorder alerts
+- [ ] Unit & integration tests (JUnit 5 + Mockito)
+- [ ] Flyway database migrations
+- [ ] Pagination and sorting on list endpoints
+- [ ] CI/CD pipeline (GitHub Actions)
 
-Inventory Management API developed using Spring Boot and MySQL for inventory tracking and stock management.
+---
+
+## 🤝 Contributing
+
+Contributions are welcome! Here's how to get started:
+
+1. **Fork** the repository
+2. **Create** a feature branch: `git checkout -b feature/your-feature-name`
+3. **Commit** your changes: `git commit -m 'feat: add your feature'`
+4. **Push** to the branch: `git push origin feature/your-feature-name`
+5. **Open** a Pull Request
+
+Please follow [Conventional Commits](https://www.conventionalcommits.org/) for commit messages.
+
+---
+
+## 📄 License
+
+This project is licensed under the **MIT License** — see the [LICENSE](LICENSE) file for details.
+
+---
+
+## 👤 Author
+
+**Krishna Saxena**
+
+[![GitHub](https://img.shields.io/badge/GitHub-KrishnaSaxena108-181717?style=flat&logo=github)](https://github.com/KrishnaSaxena108)
+
+---
+
+<div align="center">
+
+⭐ **If this project helped you, give it a star!** ⭐
+
+</div>
